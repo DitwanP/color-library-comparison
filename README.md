@@ -1,4 +1,4 @@
-# Calcite Color Library Comparison
+# Color Library Comparison
 
 An independent testing app for comparing Culori and Color.js as color-processing
 libraries for Calcite theme palettes. Both adapters run the same experimental
