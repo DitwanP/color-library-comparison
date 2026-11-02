@@ -4,6 +4,7 @@ import {
   ComparisonMode,
   MappingMethod,
   SAMPLE_SEEDS,
+  PRESERVED_TOKEN_NAMES,
   findOutOfGamutTokens,
   generateComparison,
   inSrgbGamut,
@@ -14,6 +15,7 @@ import { createThemeCss } from "../helpers/theme-css";
 const adapters = [culoriAdapter, colorjsAdapter];
 const modes: ComparisonMode[] = ["light", "dark"];
 const mappings: MappingMethod[] = ["perceptual", "strict"];
+const defaults = Object.fromEntries(PRESERVED_TOKEN_NAMES.map(token => [token, "#ffffff"]));
 
 adapters.forEach(adapter => {
   describe(adapter.name, () => {
@@ -58,7 +60,7 @@ adapters.forEach(adapter => {
     for (const mode of modes) {
       for (const mapping of mappings) {
         test.each(SAMPLE_SEEDS)(`${mode}, ${mapping}: generates valid results for $label`, ({ value }) => {
-          const result = generateComparison(adapter, value, mode, mapping);
+          const result = generateComparison(adapter, value, mode, mapping, defaults);
           expect(Object.keys(result.tokens)).toHaveLength(44);
           for (const token of ["surface-1", "surface-2", "surface-3", "surface-4"]) {
             expect(result.tokens).toHaveProperty(`--calcite-color-${token}`);
@@ -67,14 +69,23 @@ adapters.forEach(adapter => {
             expect(result.tokens).not.toHaveProperty(`--calcite-color-${token}`);
           }
           expect(result.tokens["--calcite-color-brand"]).toBe(result.seed);
+          expect(PRESERVED_TOKEN_NAMES).not.toContain("--calcite-color-text-link");
+          expect(result.tokens["--calcite-color-text-link"]).toBe(result.tokens["--calcite-color-brand-hover"]);
+          expect(result.css).toContain(`--calcite-color-text-link: ${result.tokens["--calcite-color-text-link"]};`);
           expect(result.contrastChecks).toHaveLength(8);
           expect(Object.values(result.source).every(Number.isFinite)).toBe(true);
-          expect(result).toEqual(generateComparison(adapter, value, mode, mapping));
+          expect(result).toEqual(generateComparison(adapter, value, mode, mapping, defaults));
           expect(result.css.startsWith(`:root {\n  color-scheme: ${mode};\n`)).toBe(true);
           expect(result.css).not.toContain("calcite-mode-");
           Object.entries(result.tokens).forEach(([token, hex]) => {
             expect(hex).toMatch(/^(?:#[0-9a-f]{6}|rgba\(\d+, \d+, \d+, (?:0|0?\.\d+)\))$/);
-            expect(result.css).toContain(`${token}: ${hex};`);
+            if (PRESERVED_TOKEN_NAMES.includes(token)) {
+              expect(hex).toBe(defaults[token]);
+              expect(result.css).not.toContain(`${token}:`);
+              expect(result.mappedTokens).not.toContain(token);
+            } else {
+              expect(result.css).toContain(`${token}: ${hex};`);
+            }
           });
           for (const check of result.contrastChecks) {
             const foreground = result.tokens[`--calcite-color-${check.foreground}`];
@@ -88,7 +99,7 @@ adapters.forEach(adapter => {
     }
 
     test("reports failures rather than claiming arbitrary seeds are accessible", () => {
-      const result = generateComparison(adapter, "#ffff00", "light", "perceptual");
+      const result = generateComparison(adapter, "#ffff00", "light", "perceptual", defaults);
       const brandText = result.contrastChecks.find(check => check.background === "brand");
       if (!brandText) throw new Error("The generated recipe is missing its brand contrast check.");
       expect(brandText.passes).toBe(false);

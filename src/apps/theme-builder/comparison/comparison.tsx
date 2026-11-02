@@ -11,6 +11,7 @@ import {
   ComparisonResult,
   MappingMethod,
   SAMPLE_SEEDS,
+  PRESERVED_TOKEN_NAMES,
   findOutOfGamutTokens,
   generateComparison,
   measureContrastChecks,
@@ -93,9 +94,9 @@ const LibraryResult = ({
       <p className="color-comparison-link">Sample link color</p>
       <div className="color-comparison-highlight">Surface highlight</div>
     </div>
-    <h3>Final sRGB colors</h3>
+    <h3>{result.source ? "Output colors" : "Default colors"}</h3>
     <ul className="color-comparison-swatches">
-      {Object.entries(result.tokens).map(([token, value]) => (
+      {Object.entries(result.tokens).sort(([firstToken], [secondToken]) => firstToken.localeCompare(secondToken)).map(([token, value]) => (
         <li key={token}>
           <span aria-hidden="true" style={{ backgroundColor: value }} />
           <code>{token}</code>
@@ -152,10 +153,13 @@ export const ColorLibraryComparison = () => {
   const [mode, setMode] = useState<ComparisonMode>("light");
   const [mapping, setMapping] = useState<MappingMethod>("perceptual");
   const [error, setError] = useState("");
-  const results = useMemo(() => adapters.map(adapter => generateComparison(adapter, seed, mode, mapping)), [seed, mode, mapping]);
-  const differingTokens = Object.keys(results[0].tokens).filter(token => results[0].tokens[token] !== results[1].tokens[token]);
-  const tokenSignature = Object.keys(results[0].tokens).join("|");
   const [calciteDefaultTokens, setCalciteDefaultTokens] = useState<Record<string, string> | null>(null);
+  const results = useMemo(
+    () => adapters.map(adapter => generateComparison(adapter, seed, mode, mapping, calciteDefaultTokens ?? {})),
+    [seed, mode, mapping, calciteDefaultTokens]
+  );
+  const differingTokens = Object.keys(results[0].tokens).filter(token => results[0].tokens[token] !== results[1].tokens[token]);
+  const tokenSignature = [...new Set([...PRESERVED_TOKEN_NAMES, ...Object.keys(results[0].tokens)])].join("|");
 
   useEffect(() => {
     setCalciteDefaultTokens(readCalciteDefaultTokens(mode, tokenSignature.split("|")));

@@ -73,8 +73,20 @@ const contrastPairs: [string, string, number][] = [
   ["status-danger", "surface-3", 3]
 ];
 
+export const PRESERVED_TOKEN_NAMES = [
+  "border-1", "border-2", "border-3", "border-ghost", "border-input", "border-white",
+  "status-danger", "status-danger-hover", "status-danger-press",
+  "status-info", "status-info-hover", "status-info-press",
+  "status-success", "status-success-hover", "status-success-press",
+  "status-warning", "status-warning-hover", "status-warning-press",
+  "surface-1", "surface-2", "surface-3", "surface-4",
+  "text-1", "text-2", "text-3", "text-highlight", "text-inverse"
+].map(token => `--calcite-color-${token}`);
+
 export const measureContrastChecks = (adapter: ColorAdapter, tokens: Record<string, string>) =>
-  contrastPairs.map(([foreground, background, target]) => {
+  contrastPairs.filter(([foreground, background]) =>
+    tokens[`--calcite-color-${foreground}`] !== undefined && tokens[`--calcite-color-${background}`] !== undefined
+  ).map(([foreground, background, target]) => {
     const ratio = adapter.contrast(tokens[`--calcite-color-${foreground}`], tokens[`--calcite-color-${background}`]);
     if (!Number.isFinite(ratio)) throw new Error(`${adapter.name} returned an invalid contrast ratio.`);
     return { foreground, background, target, ratio, passes: ratio >= target };
@@ -85,22 +97,21 @@ export const findOutOfGamutTokens = (adapter: ColorAdapter, tokens: Record<strin
     .filter(([, value]) => !adapter.inGamut(adapter.toOklch(value)))
     .map(([token]) => token);
 
-export const generateComparison = (adapter: ColorAdapter, input: string, mode: ComparisonMode, mapping: MappingMethod) => {
+export const generateComparison = (
+  adapter: ColorAdapter,
+  input: string,
+  mode: ComparisonMode,
+  mapping: MappingMethod,
+  defaults: Record<string, string> = {}
+) => {
   const seed = normalizeSeed(input);
   const source = normalizeOklch(adapter.toOklch(seed));
   const dark = mode === "dark";
   const brand = (offset: number): OklchColor => ({ ...source, l: clampLightness(source.l + offset) });
   const neutral = (l: number): OklchColor => ({ l, c: Math.min(source.c * 0.08, 0.02), h: source.h });
-  const statusColor = (hue: number, offset: number): OklchColor => ({ l: (dark ? 0.62 : 0.56) + offset, c: 0.16, h: hue });
   const accentSurface: OklchColor = { l: dark ? 0.3 : 0.9, c: Math.min(source.c, 0.06), h: source.h };
   const colors: Record<string, OklchColor | string> = {
     "--calcite-color-background-none": "rgba(255, 255, 255, 0)",
-    "--calcite-color-border-1": neutral(dark ? 0.42 : 0.8),
-    "--calcite-color-border-2": neutral(dark ? 0.36 : 0.84),
-    "--calcite-color-border-3": neutral(dark ? 0.3 : 0.88),
-    "--calcite-color-border-ghost": "rgba(0, 0, 0, 0.3)",
-    "--calcite-color-border-input": neutral(dark ? 0.65 : 0.6),
-    "--calcite-color-border-white": neutral(1),
     "--calcite-color-brand": brand(0),
     "--calcite-color-brand-hover": brand(dark ? 0.08 : -0.08),
     "--calcite-color-brand-press": brand(dark ? 0.16 : -0.16),
@@ -108,28 +119,7 @@ export const generateComparison = (adapter: ColorAdapter, input: string, mode: C
     "--calcite-color-inverse": neutral(dark ? 0.94 : 0.22),
     "--calcite-color-inverse-hover": neutral(dark ? 0.98 : 0.16),
     "--calcite-color-inverse-press": neutral(dark ? 1 : 0.1),
-    "--calcite-color-status-danger": statusColor(25, 0),
-    "--calcite-color-status-danger-hover": statusColor(25, dark ? 0.08 : -0.06),
-    "--calcite-color-status-danger-press": statusColor(25, dark ? 0.14 : -0.12),
-    "--calcite-color-status-info": statusColor(240, 0),
-    "--calcite-color-status-info-hover": statusColor(240, dark ? 0.08 : -0.06),
-    "--calcite-color-status-info-press": statusColor(240, dark ? 0.14 : -0.12),
-    "--calcite-color-status-success": statusColor(145, 0),
-    "--calcite-color-status-success-hover": statusColor(145, dark ? 0.08 : -0.06),
-    "--calcite-color-status-success-press": statusColor(145, dark ? 0.14 : -0.12),
-    "--calcite-color-status-warning": statusColor(80, 0),
-    "--calcite-color-status-warning-hover": statusColor(80, dark ? 0.08 : -0.06),
-    "--calcite-color-status-warning-press": statusColor(80, dark ? 0.14 : -0.12),
-    "--calcite-color-surface-1": neutral(dark ? 0.1 : 0.97),
-    "--calcite-color-surface-2": neutral(dark ? 0.16 : 0.98),
-    "--calcite-color-surface-3": neutral(dark ? 0.22 : 0.95),
-    "--calcite-color-surface-4": neutral(dark ? 0.28 : 0.91),
     "--calcite-color-surface-highlight": accentSurface,
-    "--calcite-color-text-1": neutral(dark ? 0.94 : 0.2),
-    "--calcite-color-text-2": neutral(dark ? 0.78 : 0.34),
-    "--calcite-color-text-3": neutral(dark ? 0.64 : 0.5),
-    "--calcite-color-text-highlight": brand(dark ? 0.2 : -0.2),
-    "--calcite-color-text-inverse": neutral(dark ? 0.04 : 0.98),
     "--calcite-color-text-link": brand(dark ? 0.08 : -0.08),
     "--calcite-color-transparent": "rgba(0, 0, 0, 0)",
     "--calcite-color-transparent-hover": "rgba(0, 0, 0, 0.04)",
@@ -139,12 +129,14 @@ export const generateComparison = (adapter: ColorAdapter, input: string, mode: C
     "--calcite-color-transparent-scrim": "rgba(255, 255, 255, 0.85)",
     "--calcite-color-transparent-tint": "rgba(255, 255, 255, 0.8)"
   };
-  const tokens = Object.fromEntries(
+  const overrides = Object.fromEntries(
     Object.entries(colors).map(([token, color]) => [
       token,
       token === "--calcite-color-brand" ? seed : typeof color === "string" ? color : adapter.toHex(color, mapping)
     ])
   );
+  const preserved = Object.fromEntries(Object.entries(defaults).filter(([token]) => PRESERVED_TOKEN_NAMES.includes(token)));
+  const tokens = { ...preserved, ...overrides };
   const contrastChecks = measureContrastChecks(adapter, tokens);
   return {
     seed,
@@ -154,7 +146,7 @@ export const generateComparison = (adapter: ColorAdapter, input: string, mode: C
     mappedTokens: Object.entries(colors)
       .filter(([, color]) => typeof color !== "string" && !adapter.inGamut(color))
       .map(([token]) => token),
-    css: createThemeCss(tokens, mode)
+    css: createThemeCss(overrides, mode)
   };
 };
 
