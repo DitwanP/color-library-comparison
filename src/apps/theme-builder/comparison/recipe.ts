@@ -79,6 +79,7 @@ export const PRESERVED_TOKEN_NAMES = [
   "status-info", "status-info-hover", "status-info-press",
   "status-success", "status-success-hover", "status-success-press",
   "status-warning", "status-warning-hover", "status-warning-press",
+  "focus",
   "surface-1", "surface-2", "surface-3", "surface-4",
   "text-1", "text-2", "text-3", "text-highlight", "text-inverse"
 ].map(token => `--calcite-color-${token}`);

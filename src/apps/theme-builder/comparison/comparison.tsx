@@ -1,4 +1,5 @@
-import React, { CSSProperties, FormEvent, useEffect, useMemo, useState } from "react";
+import React, { CSSProperties, FormEvent, useEffect, useMemo, useRef, useState } from "react";
+import "@esri/calcite-components/types/react";
 import "@esri/calcite-components/dist/components/calcite-button";
 import "@esri/calcite-components/dist/components/calcite-input";
 import "@esri/calcite-components/dist/components/calcite-link";
@@ -6,7 +7,6 @@ import "@esri/calcite-components/dist/components/calcite-list";
 import "@esri/calcite-components/dist/components/calcite-list-item";
 import "@esri/calcite-components/dist/components/calcite-option";
 import "@esri/calcite-components/dist/components/calcite-select";
-import { CalciteButton, CalciteInput, CalciteLink, CalciteList, CalciteListItem, CalciteOption, CalciteSelect } from "@esri/calcite-components-react";
 import { culoriAdapter } from "./culori";
 import { colorjsAdapter } from "./colorjs";
 import {
@@ -27,27 +27,20 @@ type TokenStyles = CSSProperties & Record<string, string>;
 type DisplayResult = Pick<ComparisonResult, "tokens" | "contrastChecks"> &
   Partial<Pick<ComparisonResult, "source" | "mappedTokens" | "css" | "overrides" | "candidateTokens">> & { outOfGamutTokens?: string[] };
 
-const legacySurfaceTokens: Record<string, string> = {
-  "--calcite-color-surface-1": "--calcite-color-background",
-  "--calcite-color-surface-2": "--calcite-color-foreground-1",
-  "--calcite-color-surface-3": "--calcite-color-foreground-2",
-  "--calcite-color-surface-4": "--calcite-color-foreground-3"
-};
-
 const readCalciteDefaultTokens = (mode: ComparisonMode, tokenNames: string[]): Record<string, string> => {
   const probe = document.createElement("div");
   probe.classList.add(`calcite-mode-${mode}`);
   probe.style.position = "absolute";
   probe.style.visibility = "hidden";
+  probe.style.colorScheme = mode;
   document.body.appendChild(probe);
 
   try {
-    const styles = window.getComputedStyle(probe);
     return Object.fromEntries(
       tokenNames.map(token => {
-        const sourceToken = legacySurfaceTokens[token] ?? token;
-        const value = styles.getPropertyValue(sourceToken).trim();
-        if (!value) throw new Error(`Calcite does not define the default value for ${sourceToken}.`);
+        probe.style.color = `var(${token})`;
+        const value = window.getComputedStyle(probe).color.trim();
+        if (!value) throw new Error(`Calcite does not define the default value for ${token}.`);
         return [token, value];
       })
     );
@@ -87,26 +80,23 @@ const LibraryResult = ({
       className={`color-comparison-preview calcite-mode-${mode}`}
       style={{
         ...result.tokens,
-        ...Object.fromEntries(Object.entries(legacySurfaceTokens).map(([surface, legacy]) => [legacy, result.tokens[surface]])),
-        "--calcite-color-foreground-current": result.tokens["--calcite-color-surface-highlight"],
-        "--calcite-color-background": previewSurface,
         "--calcite-color-surface-1": previewSurface,
         colorScheme: mode
       } as TokenStyles}
     >
       <h3>Component preview</h3>
       <div className="color-comparison-states">
-        <CalciteButton type="button" scale="s">Primary</CalciteButton>
-        <CalciteButton type="button" appearance="outline" scale="s">Secondary</CalciteButton>
-        <CalciteButton type="button" disabled scale="s">Disabled</CalciteButton>
+          <calcite-button type="button" scale="s">Primary</calcite-button>
+          <calcite-button type="button" appearance="outline" scale="s">Secondary</calcite-button>
+          <calcite-button type="button" disabled scale="s">Disabled</calcite-button>
       </div>
       <p>
-        <CalciteLink href={`#${name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-colors`}>View colors</CalciteLink>
+        <calcite-link href={`#${name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-colors`}>View colors</calcite-link>
       </p>
-      <CalciteList label={`${name} preview layers`} selectionMode="single-persist" scale="s">
-        <CalciteListItem label="Parcels" description="Property boundaries" value="parcels" selected />
-        <CalciteListItem label="Buildings" description="Building footprints" value="buildings" />
-      </CalciteList>
+      <calcite-list label={`${name} preview layers`} selectionMode="single-persist" scale="s">
+        <calcite-list-item label="Parcels" description="Property boundaries" value="parcels" selected />
+        <calcite-list-item label="Buildings" description="Building footprints" value="buildings" />
+      </calcite-list>
     </div>
     <h3 id={`${name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-colors`}>{result.source ? "Output colors" : "Default colors"}</h3>
     <ul className="color-comparison-swatches">
@@ -168,6 +158,28 @@ export const ColorLibraryComparison = () => {
   const [mapping, setMapping] = useState<MappingMethod>("perceptual");
   const [error, setError] = useState("");
   const [calciteDefaultTokens, setCalciteDefaultTokens] = useState<Record<string, string> | null>(null);
+  const seedInputRef = useRef<HTMLCalciteInputElement>(null);
+  const modeSelectRef = useRef<HTMLCalciteSelectElement>(null);
+  const mappingSelectRef = useRef<HTMLCalciteSelectElement>(null);
+
+  useEffect(() => {
+    const seedInput = seedInputRef.current;
+    const modeSelect = modeSelectRef.current;
+    const mappingSelect = mappingSelectRef.current;
+    if (!seedInput || !modeSelect || !mappingSelect) return;
+
+    const handleSeedInput = () => setInput(seedInput.value);
+    const handleModeChange = () => setMode(modeSelect.value === "dark" ? "dark" : "light");
+    const handleMappingChange = () => setMapping(mappingSelect.value === "strict" ? "strict" : "perceptual");
+    seedInput.addEventListener("calciteInputInput", handleSeedInput);
+    modeSelect.addEventListener("calciteSelectChange", handleModeChange);
+    mappingSelect.addEventListener("calciteSelectChange", handleMappingChange);
+    return () => {
+      seedInput.removeEventListener("calciteInputInput", handleSeedInput);
+      modeSelect.removeEventListener("calciteSelectChange", handleModeChange);
+      mappingSelect.removeEventListener("calciteSelectChange", handleMappingChange);
+    };
+  }, []);
   const results = useMemo(
     () => adapters.map(adapter => generateComparison(adapter, seed, mode, mapping, calciteDefaultTokens ?? {})),
     [seed, mode, mapping, calciteDefaultTokens]
@@ -213,36 +225,36 @@ export const ColorLibraryComparison = () => {
         builder.
       </p>
       <form className="color-comparison-controls" onSubmit={submit}>
-        <CalciteInput
+        <calcite-input
+          ref={seedInputRef}
           id="comparison-seed"
           label="Palette color (HEX)"
           labelText="Palette color (HEX)"
           value={input}
           status={error ? "invalid" : "idle"}
           validationMessage={error}
-          onCalciteInputInput={event => setInput((event.target as HTMLCalciteInputElement).value)}
         />
-        <CalciteButton type="submit">Compare color</CalciteButton>
-        <CalciteSelect
+        <calcite-button type="submit">Compare color</calcite-button>
+        <calcite-select
+          ref={modeSelectRef}
           id="comparison-mode"
           label="Mode"
           labelText="Mode"
           value={mode}
-          onCalciteSelectChange={event => setMode((event.target as HTMLCalciteSelectElement).value === "dark" ? "dark" : "light")}
         >
-          <CalciteOption value="light">Light</CalciteOption>
-          <CalciteOption value="dark">Dark</CalciteOption>
-        </CalciteSelect>
-        <CalciteSelect
+          <calcite-option value="light">Light</calcite-option>
+          <calcite-option value="dark">Dark</calcite-option>
+        </calcite-select>
+        <calcite-select
+          ref={mappingSelectRef}
           id="comparison-mapping"
           label="Gamut mapping"
           labelText="Gamut mapping"
           value={mapping}
-          onCalciteSelectChange={event => setMapping((event.target as HTMLCalciteSelectElement).value === "strict" ? "strict" : "perceptual")}
         >
-          <CalciteOption value="perceptual">Perceptual (CSS-style)</CalciteOption>
-          <CalciteOption value="strict">Strict chroma reduction</CalciteOption>
-        </CalciteSelect>
+          <calcite-option value="perceptual">Perceptual (CSS-style)</calcite-option>
+          <calcite-option value="strict">Strict chroma reduction</calcite-option>
+        </calcite-select>
       </form>
       {error && (
         <p id="comparison-error" role="alert">
@@ -251,7 +263,7 @@ export const ColorLibraryComparison = () => {
       )}
       <div className="color-comparison-samples" aria-label="Example palette colors">
         {SAMPLE_SEEDS.map(sample => (
-          <CalciteButton
+          <calcite-button
             key={sample.value}
             appearance="outline"
             scale="s"
@@ -262,7 +274,7 @@ export const ColorLibraryComparison = () => {
             }}
           >
             {sample.label}
-          </CalciteButton>
+          </calcite-button>
         ))}
       </div>
       <p>

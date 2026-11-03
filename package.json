@@ -10,8 +10,7 @@
     "compare:color-bundles": "node scripts/compare-color-libraries.cjs"
   },
   "dependencies": {
-    "@esri/calcite-components": "^3.2.1",
-    "@esri/calcite-components-react": "^3.2.1",
+    "@esri/calcite-components": "5.2.0",
     "colorjs.io": "^0.7.1",
     "culori": "^4.0.2",
     "react": "^18.3.1",

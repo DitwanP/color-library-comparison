@@ -1,6 +1,6 @@
 import React from "react";
 import { createRoot } from "react-dom/client";
-import "@esri/calcite-components/dist/calcite/calcite.css";
+import "@esri/calcite-components/main.css";
 import { ColorLibraryComparison } from "./apps/theme-builder/comparison/comparison";
 import "./styles.css";
 

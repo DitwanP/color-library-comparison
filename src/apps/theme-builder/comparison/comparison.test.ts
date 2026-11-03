@@ -61,10 +61,10 @@ adapters.forEach(adapter => {
       for (const mapping of mappings) {
         test.each(SAMPLE_SEEDS)(`${mode}, ${mapping}: generates valid results for $label`, ({ value }) => {
           const result = generateComparison(adapter, value, mode, mapping, defaults);
-          expect(Object.keys(result.tokens)).toHaveLength(44);
+          expect(Object.keys(result.tokens)).toHaveLength(45);
           expect(Object.keys(result.overrides)).toHaveLength(17);
           expect(result.candidateTokens).toHaveLength(8);
-          expect(Object.keys(result.tokens).length - Object.keys(result.overrides).length).toBe(27);
+          expect(Object.keys(result.tokens).length - Object.keys(result.overrides).length).toBe(28);
           for (const token of result.candidateTokens) {
             expect(result.overrides).toHaveProperty(token);
             expect(PRESERVED_TOKEN_NAMES).not.toContain(token);
