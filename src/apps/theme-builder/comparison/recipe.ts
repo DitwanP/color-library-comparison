@@ -138,14 +138,18 @@ export const generateComparison = (
   const preserved = Object.fromEntries(Object.entries(defaults).filter(([token]) => PRESERVED_TOKEN_NAMES.includes(token)));
   const tokens = { ...preserved, ...overrides };
   const contrastChecks = measureContrastChecks(adapter, tokens);
+  const candidateTokens = Object.keys(colors).filter(token => typeof colors[token] !== "string");
   return {
     seed,
     source,
     tokens,
+    overrides,
+    candidateTokens,
     contrastChecks,
-    mappedTokens: Object.entries(colors)
-      .filter(([, color]) => typeof color !== "string" && !adapter.inGamut(color))
-      .map(([token]) => token),
+    mappedTokens: candidateTokens.filter(token => {
+      const color = colors[token];
+      return typeof color !== "string" && !adapter.inGamut(color);
+    }),
     css: createThemeCss(overrides, mode)
   };
 };

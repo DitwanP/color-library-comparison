@@ -25,7 +25,7 @@ import "./comparison.scss";
 const adapters = [culoriAdapter, colorjsAdapter];
 type TokenStyles = CSSProperties & Record<string, string>;
 type DisplayResult = Pick<ComparisonResult, "tokens" | "contrastChecks"> &
-  Partial<Pick<ComparisonResult, "source" | "mappedTokens" | "css">> & { outOfGamutTokens?: string[] };
+  Partial<Pick<ComparisonResult, "source" | "mappedTokens" | "css" | "overrides" | "candidateTokens">> & { outOfGamutTokens?: string[] };
 
 const legacySurfaceTokens: Record<string, string> = {
   "--calcite-color-surface-1": "--calcite-color-background",
@@ -73,12 +73,14 @@ const LibraryResult = ({
       <p>
         Seed OKLCH: {result.source.l.toFixed(5)} / {result.source.c.toFixed(5)} / {result.source.h.toFixed(2)} degrees
         <br />
-        {result.mappedTokens?.length ?? 0} of {Object.keys(result.tokens).length} candidates outside sRGB before mapping.
+        {result.mappedTokens?.length ?? 0} of {result.candidateTokens?.length ?? 0} OKLCH candidates outside sRGB before mapping.
+        <br />
+        {Object.keys(result.overrides ?? {}).length} exported overrides; {Object.keys(result.tokens).length - Object.keys(result.overrides ?? {}).length} preserved defaults unchanged.
       </p>
     ) : (
       <p>
-        {result.outOfGamutTokens?.length ?? 0} of {Object.keys(result.tokens).length} candidates outside sRGB before mapping. Raw Calcite
-        defaults are not mapped.
+        {result.outOfGamutTokens?.length ?? 0} of {Object.keys(result.tokens).length} default colors outside sRGB. Raw Calcite defaults are
+        not mapped.
       </p>
     )}
     <div
@@ -170,7 +172,7 @@ export const ColorLibraryComparison = () => {
     () => adapters.map(adapter => generateComparison(adapter, seed, mode, mapping, calciteDefaultTokens ?? {})),
     [seed, mode, mapping, calciteDefaultTokens]
   );
-  const differingTokens = Object.keys(results[0].tokens).filter(token => results[0].tokens[token] !== results[1].tokens[token]);
+  const differingTokens = Object.keys(results[0].overrides).filter(token => results[0].overrides[token] !== results[1].overrides[token]);
   const tokenSignature = [...new Set([...PRESERVED_TOKEN_NAMES, ...Object.keys(results[0].tokens)])].join("|");
 
   useEffect(() => {
@@ -273,7 +275,7 @@ export const ColorLibraryComparison = () => {
         library&apos;s unrounded result.
       </p>
       <p role="status">
-        {seed}, {mode} mode: {differingTokens.length} of {Object.keys(results[0].tokens).length} exported color values differ between libraries.
+        {seed}, {mode} mode: {differingTokens.length} of {Object.keys(results[0].overrides).length} exported overrides differ between libraries.
       </p>
       {differingTokens.length > 0 && (
         <section className="color-comparison-differences" aria-label="Tokens that differ between libraries">

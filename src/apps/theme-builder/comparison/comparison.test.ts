@@ -62,6 +62,22 @@ adapters.forEach(adapter => {
         test.each(SAMPLE_SEEDS)(`${mode}, ${mapping}: generates valid results for $label`, ({ value }) => {
           const result = generateComparison(adapter, value, mode, mapping, defaults);
           expect(Object.keys(result.tokens)).toHaveLength(44);
+          expect(Object.keys(result.overrides)).toHaveLength(17);
+          expect(result.candidateTokens).toHaveLength(8);
+          expect(Object.keys(result.tokens).length - Object.keys(result.overrides).length).toBe(27);
+          for (const token of result.candidateTokens) {
+            expect(result.overrides).toHaveProperty(token);
+            expect(PRESERVED_TOKEN_NAMES).not.toContain(token);
+          }
+          expect(result.candidateTokens).not.toContain("--calcite-color-transparent");
+          expect(result.candidateTokens).not.toContain("--calcite-color-brand-underline");
+          for (const token of result.mappedTokens) {
+            expect(result.candidateTokens).toContain(token);
+          }
+          const withoutDefaults = generateComparison(adapter, value, mode, mapping);
+          expect(withoutDefaults.overrides).toEqual(result.overrides);
+          expect(withoutDefaults.candidateTokens).toEqual(result.candidateTokens);
+          expect(withoutDefaults.mappedTokens).toEqual(result.mappedTokens);
           for (const token of ["surface-1", "surface-2", "surface-3", "surface-4"]) {
             expect(result.tokens).toHaveProperty(`--calcite-color-${token}`);
           }
