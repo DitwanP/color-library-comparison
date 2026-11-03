@@ -1,9 +1,12 @@
 import React, { CSSProperties, FormEvent, useEffect, useMemo, useState } from "react";
 import "@esri/calcite-components/dist/components/calcite-button";
 import "@esri/calcite-components/dist/components/calcite-input";
+import "@esri/calcite-components/dist/components/calcite-link";
+import "@esri/calcite-components/dist/components/calcite-list";
+import "@esri/calcite-components/dist/components/calcite-list-item";
 import "@esri/calcite-components/dist/components/calcite-option";
 import "@esri/calcite-components/dist/components/calcite-select";
-import { CalciteButton, CalciteInput, CalciteOption, CalciteSelect } from "@esri/calcite-components-react";
+import { CalciteButton, CalciteInput, CalciteLink, CalciteList, CalciteListItem, CalciteOption, CalciteSelect } from "@esri/calcite-components-react";
 import { culoriAdapter } from "./culori";
 import { colorjsAdapter } from "./colorjs";
 import {
@@ -79,22 +82,31 @@ const LibraryResult = ({
       </p>
     )}
     <div
-      className="color-comparison-preview"
-      style={{ ...result.tokens, "--calcite-color-surface-1": previewSurface, colorScheme: mode } as TokenStyles}
+      className={`color-comparison-preview calcite-mode-${mode}`}
+      style={{
+        ...result.tokens,
+        ...Object.fromEntries(Object.entries(legacySurfaceTokens).map(([surface, legacy]) => [legacy, result.tokens[surface]])),
+        "--calcite-color-foreground-current": result.tokens["--calcite-color-surface-highlight"],
+        "--calcite-color-background": previewSurface,
+        "--calcite-color-surface-1": previewSurface,
+        colorScheme: mode
+      } as TokenStyles}
     >
-      <h3>Shared recipe preview</h3>
-      <p>Primary text on a seed-tinted surface.</p>
+      <h3>Component preview</h3>
       <div className="color-comparison-states">
-        {["brand", "brand-hover", "brand-press"].map(token => (
-          <span key={token} style={{ backgroundColor: result.tokens[`--calcite-color-${token}`] }}>
-            {token.replace("brand", "Brand")}
-          </span>
-        ))}
+        <CalciteButton type="button" scale="s">Primary</CalciteButton>
+        <CalciteButton type="button" appearance="outline" scale="s">Secondary</CalciteButton>
+        <CalciteButton type="button" disabled scale="s">Disabled</CalciteButton>
       </div>
-      <p className="color-comparison-link">Sample link color</p>
-      <div className="color-comparison-highlight">Surface highlight</div>
+      <p>
+        <CalciteLink href={`#${name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-colors`}>View colors</CalciteLink>
+      </p>
+      <CalciteList label={`${name} preview layers`} selectionMode="single-persist" scale="s">
+        <CalciteListItem label="Parcels" description="Property boundaries" value="parcels" selected />
+        <CalciteListItem label="Buildings" description="Building footprints" value="buildings" />
+      </CalciteList>
     </div>
-    <h3>{result.source ? "Output colors" : "Default colors"}</h3>
+    <h3 id={`${name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-colors`}>{result.source ? "Output colors" : "Default colors"}</h3>
     <ul className="color-comparison-swatches">
       {Object.entries(result.tokens).sort(([firstToken], [secondToken]) => firstToken.localeCompare(secondToken)).map(([token, value]) => (
         <li key={token}>

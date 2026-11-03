@@ -34,21 +34,10 @@
     h3 {
       color: inherit;
     }
-  }
 
-  .color-comparison-states span {
-    color: var(--calcite-color-text-inverse);
-    padding: 0.75rem;
-  }
-
-  .color-comparison-link {
-    color: var(--calcite-color-text-link);
-    text-decoration: underline;
-  }
-
-  .color-comparison-highlight {
-    background: var(--calcite-color-surface-highlight);
-    padding: 0.75rem;
+    calcite-list-item[selected] {
+      --calcite-list-background-color: var(--calcite-color-surface-highlight);
+    }
   }
 
   .color-comparison-swatches {
