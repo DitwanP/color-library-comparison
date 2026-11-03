@@ -1,4 +1,4 @@
-import { culoriAdapter } from "./culori";
+import { culoriAdapter, formatCalciteDefaultColor } from "./culori";
 import { colorjsAdapter } from "./colorjs";
 import {
   ComparisonMode,
@@ -16,6 +16,14 @@ const adapters = [culoriAdapter, colorjsAdapter];
 const modes: ComparisonMode[] = ["light", "dark"];
 const mappings: MappingMethod[] = ["perceptual", "strict"];
 const defaults = Object.fromEntries(PRESERVED_TOKEN_NAMES.map(token => [token, "#ffffff"]));
+
+test.each([
+  ["rgb(247, 247, 247)", "#f7f7f7"],
+  ["rgba(255, 255, 255, 0.85)", "rgba(255, 255, 255, 0.85)"],
+  ["rgba(0, 0, 0, 0)", "rgba(0, 0, 0, 0)"]
+])("formats Calcite default %s compactly without changing alpha", (color, expected) => {
+  expect(formatCalciteDefaultColor(color)).toBe(expected);
+});
 
 adapters.forEach(adapter => {
   describe(adapter.name, () => {

@@ -36,9 +36,9 @@ mapping. The sample buttons provide a few repeatable test colors.
 - Culori and Color.js use functional imports and implement the same adapter
   contract: HEX/OKLCH conversion, gamut checks, HEX serialization, and WCAG
   contrast measurement.
-- The Calcite defaults column reads values directly from the installed
-  Calcite Components stylesheet without color conversion or gamut mapping;
-  its contrast checks are measured with Culori.
+- The Calcite defaults column reads colors from the installed Calcite
+  Components stylesheet and serializes them as HEX without gamut mapping.
+  Alpha colors remain `rgba()`; contrast checks are measured with Culori.
 - Perceptual mapping uses each library's CSS-style algorithm, which can differ.
   Strict mapping reduces OKLCH chroma without an intentional perceptual
   clipping allowance.

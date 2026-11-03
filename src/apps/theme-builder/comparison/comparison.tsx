@@ -7,7 +7,7 @@ import "@esri/calcite-components/dist/components/calcite-list";
 import "@esri/calcite-components/dist/components/calcite-list-item";
 import "@esri/calcite-components/dist/components/calcite-option";
 import "@esri/calcite-components/dist/components/calcite-select";
-import { culoriAdapter } from "./culori";
+import { culoriAdapter, formatCalciteDefaultColor } from "./culori";
 import { colorjsAdapter } from "./colorjs";
 import {
   ComparisonMode,
@@ -41,7 +41,7 @@ const readCalciteDefaultTokens = (mode: ComparisonMode, tokenNames: string[]): R
         probe.style.color = `var(${token})`;
         const value = window.getComputedStyle(probe).color.trim();
         if (!value) throw new Error(`Calcite does not define the default value for ${token}.`);
-        return [token, value];
+        return [token, formatCalciteDefaultColor(value)];
       })
     );
   } finally {
@@ -112,7 +112,7 @@ const LibraryResult = ({
     </ul>
     <h3>Contrast checks</h3>
     <p>
-      {result.source ? "Measured after HEX rounding." : "Measured with Culori from the raw CSS values."} Passing these checks is not a
+      {result.source ? "Measured after HEX rounding." : "Measured with Culori from Calcite's default colors."} Passing these checks is not a
       full accessibility assessment.
     </p>
     <div className="color-comparison-table">

@@ -1,4 +1,4 @@
-import { converter, formatHex, modeLrgb, modeOklab, modeOklch, modeRgb, toGamut, useMode, wcagContrast } from "culori/fn";
+import { converter, formatHex, formatRgb, modeLrgb, modeOklab, modeOklch, modeRgb, toGamut, useMode, wcagContrast } from "culori/fn";
 import { ColorAdapter, inSrgbGamut } from "./recipe";
 
 useMode(modeRgb);
@@ -10,6 +10,15 @@ const toOklch = converter("oklch");
 const toRgb = converter("rgb");
 const perceptual = toGamut("rgb", "oklch");
 const strict = toGamut("rgb", "oklch", null);
+
+export const formatCalciteDefaultColor = (value: string): string => {
+  const color = toRgb(value);
+  if (!color) throw new Error(`Culori could not parse ${value} as a CSS color.`);
+  if (color.alpha !== undefined && color.alpha < 1) return formatRgb(color);
+  const hex = formatHex(color);
+  if (!hex) throw new Error(`Culori could not serialize ${value} as HEX.`);
+  return hex.toLowerCase();
+};
 
 export const culoriAdapter: ColorAdapter = {
   name: "Culori",
