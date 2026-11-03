@@ -56,6 +56,8 @@ export const normalizeOklch = ({ l, c, h }: OklchColor): OklchColor => {
 };
 
 const clampLightness = (lightness: number): number => Math.max(0, Math.min(1, lightness));
+const calciteBrandLightness = 0.5608;
+const darkBrandLightnessOffset = 0.1027;
 
 const rgbaFromHex = (hex: string, alpha: number): string => {
   const channels = [1, 3, 5].map(index => parseInt(hex.slice(index, index + 2), 16));
@@ -108,7 +110,13 @@ export const generateComparison = (
   const seed = normalizeSeed(input);
   const source = normalizeOklch(adapter.toOklch(seed));
   const dark = mode === "dark";
-  const brand = (offset: number): OklchColor => ({ ...source, l: clampLightness(source.l + offset) });
+  const darkLightnessScale = Math.max(0, (1 - source.l) / (1 - calciteBrandLightness));
+  const brand = (offset: number): OklchColor => ({
+    ...source,
+    l: clampLightness(
+      source.l + (dark ? (darkBrandLightnessOffset + offset) * darkLightnessScale : offset)
+    )
+  });
   const neutral = (l: number): OklchColor => ({ l, c: Math.min(source.c * 0.08, 0.02), h: source.h });
   const accentSurface: OklchColor = { l: dark ? 0.3 : 0.9, c: Math.min(source.c, 0.06), h: source.h };
   const colors: Record<string, OklchColor | string> = {
@@ -133,7 +141,7 @@ export const generateComparison = (
   const overrides = Object.fromEntries(
     Object.entries(colors).map(([token, color]) => [
       token,
-      token === "--calcite-color-brand" ? seed : typeof color === "string" ? color : adapter.toHex(color, mapping)
+      token === "--calcite-color-brand" && !dark ? seed : typeof color === "string" ? color : adapter.toHex(color, mapping)
     ])
   );
   const preserved = Object.fromEntries(Object.entries(defaults).filter(([token]) => PRESERVED_TOKEN_NAMES.includes(token)));

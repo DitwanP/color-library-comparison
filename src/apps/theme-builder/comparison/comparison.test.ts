@@ -84,7 +84,18 @@ adapters.forEach(adapter => {
           for (const token of ["background", "foreground-1", "foreground-2", "foreground-3", "foreground-current"]) {
             expect(result.tokens).not.toHaveProperty(`--calcite-color-${token}`);
           }
-          expect(result.tokens["--calcite-color-brand"]).toBe(result.seed);
+          expect(result.seed).toBe(normalizeSeed(value));
+          expect(result.source).toEqual(adapter.toOklch(result.seed));
+          if (mode === "light") {
+            expect(result.tokens["--calcite-color-brand"]).toBe(result.seed);
+          } else {
+            const darkBrand = adapter.toOklch(result.tokens["--calcite-color-brand"]);
+            if (result.source.l < 0.999) {
+              expect(darkBrand.l).toBeGreaterThanOrEqual(result.source.l - 0.005);
+            } else {
+              expect(darkBrand.l).toBeCloseTo(1, 2);
+            }
+          }
           expect(PRESERVED_TOKEN_NAMES).not.toContain("--calcite-color-text-link");
           expect(result.tokens["--calcite-color-text-link"]).toBe(result.tokens["--calcite-color-brand-hover"]);
           expect(result.css).toContain(`--calcite-color-text-link: ${result.tokens["--calcite-color-text-link"]};`);
@@ -113,6 +124,19 @@ adapters.forEach(adapter => {
         });
       }
     }
+
+    test.each(mappings)("brightens the Calcite blue brand in dark mode with %s mapping", mapping => {
+      const seed = "#007ac2";
+      const lightResult = generateComparison(adapter, seed, "light", mapping, defaults);
+      const darkResult = generateComparison(adapter, seed, "dark", mapping, defaults);
+      const lightBrand = adapter.toOklch(lightResult.tokens["--calcite-color-brand"]);
+      const darkBrand = adapter.toOklch(darkResult.tokens["--calcite-color-brand"]);
+
+      expect(darkResult.seed).toBe(seed);
+      expect(darkResult.source).toEqual(lightResult.source);
+      expect(lightBrand.l).toBeCloseTo(darkResult.source.l, 3);
+      expect(darkBrand.l).toBeGreaterThan(lightBrand.l);
+    });
 
     test("reports failures rather than claiming arbitrary seeds are accessible", () => {
       const result = generateComparison(adapter, "#ffff00", "light", "perceptual", defaults);
