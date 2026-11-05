@@ -220,9 +220,7 @@ export const ColorLibraryComparison = () => {
     <main className="color-library-comparison">
       <h1>Color library comparison</h1>
       <p>
-        Culori and Color.js run the same experimental recipe for Calcite's semantic color tokens. This is a library evaluation, not
-        the finished theme generator: contrast failures are reported, not automatically corrected. No changes are applied to the theme
-        builder.
+        Culori and Color.js run the same experimental recipe for Calcite's semantic color tokens. This is primarily a library evaluation, contrast failures are reported and currently not automatically corrected.
       </p>
       <form className="color-comparison-controls" onSubmit={submit}>
         <calcite-input
@@ -278,13 +276,13 @@ export const ColorLibraryComparison = () => {
         ))}
       </div>
       <p>
-        Perceptual mapping uses each library&apos;s CSS-style implementation; these are not guaranteed to be identical. Strict mapping
+        Perceptual mapping uses each library's CSS-style implementation, these are not guaranteed to be identical. Strict mapping
         reduces OKLCH chroma with no intentional perceptual clipping allowance.
       </p>
       <p>
         Both adapters use an sRGB boundary tolerance of 0.0000001 to ignore conversion roundoff. The libraries use slightly different
         luminance coefficients, so their unrounded contrast ratios can differ even for identical HEX pairs. Pass/fail uses each
-        library&apos;s unrounded result.
+        library's unrounded result.
       </p>
       <p role="status">
         {seed}, {mode} mode: {differingTokens.length} of {Object.keys(results[0].overrides).length} exported overrides differ between libraries.
